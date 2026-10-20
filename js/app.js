@@ -52,6 +52,8 @@ import {
   ModalManager
 } from './ui.js';
 
+import { api } from './api.js';
+
 // Global application state
 const AppState = {
   vaultData: null,
@@ -67,13 +69,17 @@ const AppState = {
   activeFormTags: [],
   activeDetailItemId: null,
   activeDeleteItemId: null,
-  currentDailyInsight: null
+  currentDailyInsight: null,
+  currentUser: null,
+  isCloud: false,
+  authMode: 'login' // 'login' | 'register'
 };
 
 // ============================================================================
 // Initialization
 // ============================================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Initial fallback load to keep UI responsive immediately
   AppState.vaultData = loadData();
   applyTheme(AppState.vaultData.settings?.theme || 'light');
   setupNavigation();
@@ -86,6 +92,11 @@ document.addEventListener('DOMContentLoaded', () => {
   setupConnectionModal();
   setupAiArchitectureSimulator();
   setupKeyboardShortcuts();
+  setupAuthHandlers();
+  setupMigrationHandlers();
+
+  // Check for active PHP session and cloud vault data
+  await initSessionAndData();
 
   // Initial renders
   renderDashboard();
@@ -110,7 +121,14 @@ function applyTheme(theme) {
   if (AppState.vaultData) {
     if (!AppState.vaultData.settings) AppState.vaultData.settings = {};
     AppState.vaultData.settings.theme = theme;
-    saveData(AppState.vaultData);
+
+    if (AppState.isCloud) {
+      api.updateSettings({ theme }).catch(e => {
+        console.warn('Could not sync theme preference to cloud:', e.message);
+      });
+    } else {
+      saveData(AppState.vaultData);
+    }
   }
 }
 
@@ -689,23 +707,53 @@ function setupLibraryControls() {
 // ============================================================================
 function getCardCallbacks() {
   return {
-    onTogglePin: (id) => {
+    onTogglePin: async (id) => {
       const item = AppState.vaultData.items.find(i => i.id === id);
       if (!item) return;
-      item.isPinned = !item.isPinned;
+      const nextPinned = !item.isPinned;
+      item.isPinned = nextPinned;
       item.updatedAt = new Date().toISOString();
-      saveData(AppState.vaultData);
+
+      if (AppState.isCloud) {
+        try {
+          await api.updateCapture(id, { isPinned: nextPinned });
+        } catch (e) {
+          item.isPinned = !nextPinned;
+          showToast('Failed to sync pin update: ' + e.message);
+          renderDashboard();
+          renderLibrary();
+          return;
+        }
+      } else {
+        saveData(AppState.vaultData);
+      }
+
       showToast(item.isPinned ? '📌 Capture pinned to top' : 'Capture unpinned');
       renderDashboard();
       renderLibrary();
     },
 
-    onToggleArchive: (id) => {
+    onToggleArchive: async (id) => {
       const item = AppState.vaultData.items.find(i => i.id === id);
       if (!item) return;
-      item.isArchived = !item.isArchived;
+      const nextArchived = !item.isArchived;
+      item.isArchived = nextArchived;
       item.updatedAt = new Date().toISOString();
-      saveData(AppState.vaultData);
+
+      if (AppState.isCloud) {
+        try {
+          await api.updateCapture(id, { isArchived: nextArchived });
+        } catch (e) {
+          item.isArchived = !nextArchived;
+          showToast('Failed to sync archive update: ' + e.message);
+          renderDashboard();
+          renderLibrary();
+          return;
+        }
+      } else {
+        saveData(AppState.vaultData);
+      }
+
       showToast(item.isArchived ? 'Capture archived' : 'Restored to active vault');
       renderDashboard();
       renderLibrary();
@@ -972,7 +1020,7 @@ function setupCaptureForm() {
       }
     });
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearFormErrors();
 
@@ -982,6 +1030,9 @@ function setupCaptureForm() {
       const type = document.getElementById('form-item-type')?.value;
       const url = document.getElementById('form-url')?.value;
       const isPinned = document.getElementById('form-is-pinned')?.checked;
+
+      const submitBtn = document.getElementById('form-submit-btn') || form.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn ? submitBtn.textContent : '';
 
       if (id) {
         // Update existing item
@@ -1001,10 +1052,42 @@ function setupCaptureForm() {
           return;
         }
 
-        const index = AppState.vaultData.items.findIndex(i => i.id === id);
-        AppState.vaultData.items[index] = result.item;
-        saveData(AppState.vaultData);
-        showToast(`✨ Updated ${result.item.type}: "${result.item.title}"`);
+        if (AppState.isCloud) {
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+          }
+          try {
+            const updated = await api.updateCapture(id, {
+              title: result.item.title,
+              content: result.item.content,
+              type: result.item.type,
+              url: result.item.url,
+              tags: result.item.tags,
+              isPinned: result.item.isPinned
+            });
+            const index = AppState.vaultData.items.findIndex(i => i.id === id);
+            AppState.vaultData.items[index] = updated;
+            showToast(`✨ Updated ${updated.type}: "${updated.title}"`);
+          } catch (err) {
+            showToast(`Save failed: ${err.message}`);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalBtnText;
+            }
+            return;
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalBtnText;
+            }
+          }
+        } else {
+          const index = AppState.vaultData.items.findIndex(i => i.id === id);
+          AppState.vaultData.items[index] = result.item;
+          saveData(AppState.vaultData);
+          showToast(`✨ Updated ${result.item.type}: "${result.item.title}"`);
+        }
       } else {
         // Create new item
         const result = createItem({
@@ -1022,9 +1105,33 @@ function setupCaptureForm() {
           return;
         }
 
-        AppState.vaultData.items.unshift(result.item);
-        saveData(AppState.vaultData);
-        showToast(`✨ Saved ${result.item.type}: "${result.item.title}" to your vault.`);
+        if (AppState.isCloud) {
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+          }
+          try {
+            const created = await api.createCapture(result.item);
+            AppState.vaultData.items.unshift(created);
+            showToast(`✨ Saved ${created.type}: "${created.title}" to your cloud vault.`);
+          } catch (err) {
+            showToast(`Save failed: ${err.message}`);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalBtnText;
+            }
+            return;
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalBtnText;
+            }
+          }
+        } else {
+          AppState.vaultData.items.unshift(result.item);
+          saveData(AppState.vaultData);
+          showToast(`✨ Saved ${result.item.type}: "${result.item.title}" to your vault.`);
+        }
       }
 
       ModalManager.close('modal-capture');
@@ -1126,24 +1233,54 @@ document.getElementById('detail-copy-btn')?.addEventListener('click', () => {
   }
 });
 
-document.getElementById('detail-pin-btn')?.addEventListener('click', () => {
+document.getElementById('detail-pin-btn')?.addEventListener('click', async () => {
   const item = AppState.vaultData.items.find(i => i.id === AppState.activeDetailItemId);
   if (!item) return;
-  item.isPinned = !item.isPinned;
+  const nextPinned = !item.isPinned;
+  item.isPinned = nextPinned;
   item.updatedAt = new Date().toISOString();
-  saveData(AppState.vaultData);
+
+  if (AppState.isCloud) {
+    try {
+      await api.updateCapture(item.id, { isPinned: nextPinned });
+    } catch (e) {
+      item.isPinned = !nextPinned;
+      showToast('Failed to sync pin update: ' + e.message);
+      renderDashboard();
+      renderLibrary();
+      return;
+    }
+  } else {
+    saveData(AppState.vaultData);
+  }
+
   showToast(item.isPinned ? '📌 Capture pinned' : 'Capture unpinned');
   document.getElementById('detail-pin-btn').textContent = item.isPinned ? 'Unpin' : 'Pin';
   renderDashboard();
   renderLibrary();
 });
 
-document.getElementById('detail-archive-btn')?.addEventListener('click', () => {
+document.getElementById('detail-archive-btn')?.addEventListener('click', async () => {
   const item = AppState.vaultData.items.find(i => i.id === AppState.activeDetailItemId);
   if (!item) return;
-  item.isArchived = !item.isArchived;
+  const nextArchived = !item.isArchived;
+  item.isArchived = nextArchived;
   item.updatedAt = new Date().toISOString();
-  saveData(AppState.vaultData);
+
+  if (AppState.isCloud) {
+    try {
+      await api.updateCapture(item.id, { isArchived: nextArchived });
+    } catch (e) {
+      item.isArchived = !nextArchived;
+      showToast('Failed to sync archive update: ' + e.message);
+      renderDashboard();
+      renderLibrary();
+      return;
+    }
+  } else {
+    saveData(AppState.vaultData);
+  }
+
   showToast(item.isArchived ? 'Capture archived' : 'Restored to active vault');
   ModalManager.close('modal-detail');
   renderDashboard();
@@ -1179,16 +1316,41 @@ function promptDeleteCapture(id) {
 document.getElementById('modal-delete-close-btn')?.addEventListener('click', () => ModalManager.close('modal-confirm-delete'));
 document.getElementById('modal-delete-cancel-btn')?.addEventListener('click', () => ModalManager.close('modal-confirm-delete'));
 
-document.getElementById('modal-delete-confirm-btn')?.addEventListener('click', () => {
+document.getElementById('modal-delete-confirm-btn')?.addEventListener('click', async () => {
   const id = AppState.activeDeleteItemId;
   if (!id) return;
 
-  AppState.vaultData.items = AppState.vaultData.items.filter(i => i.id !== id);
-  saveData(AppState.vaultData);
-  ModalManager.close('modal-confirm-delete');
-  showToast('Capture permanently removed');
-  renderDashboard();
-  renderLibrary();
+  const btn = document.getElementById('modal-delete-confirm-btn');
+  const originalText = btn ? btn.textContent : '';
+
+  if (AppState.isCloud) {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+    }
+    try {
+      await api.deleteCapture(id);
+      AppState.vaultData.items = AppState.vaultData.items.filter(i => i.id !== id);
+      ModalManager.close('modal-confirm-delete');
+      showToast('Capture permanently removed from cloud vault');
+      renderDashboard();
+      renderLibrary();
+    } catch (err) {
+      showToast(`Delete failed: ${err.message}`);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  } else {
+    AppState.vaultData.items = AppState.vaultData.items.filter(i => i.id !== id);
+    saveData(AppState.vaultData);
+    ModalManager.close('modal-confirm-delete');
+    showToast('Capture permanently removed');
+    renderDashboard();
+    renderLibrary();
+  }
 });
 
 // ============================================================================
@@ -1337,7 +1499,7 @@ function setupSettingsModal() {
     if (ok) showToast('Backup file downloaded successfully');
   });
 
-  // Import JSON
+  // Import JSON (Supports both Cloud & Local vaults)
   const fileInput = document.getElementById('import-json-file-input');
   document.getElementById('import-json-btn')?.addEventListener('click', () => {
     fileInput?.click();
@@ -1348,17 +1510,32 @@ function setupSettingsModal() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target.result;
-      const res = importDataFromJson(content, false, AppState.vaultData);
-      if (res.success) {
-        AppState.vaultData = res.data;
-        showToast(`Successfully imported ${res.count} captures`);
-        ModalManager.close('modal-settings');
-        renderDashboard();
-        renderLibrary();
+      if (AppState.isCloud) {
+        try {
+          const parsed = JSON.parse(content);
+          const res = await api.importCaptures(parsed);
+          const freshCaptures = await api.getCaptures();
+          AppState.vaultData.items = freshCaptures;
+          showToast(`☁️ Cloud Import: ${res.imported} imported, ${res.skipped} skipped.`);
+          ModalManager.close('modal-settings');
+          renderDashboard();
+          renderLibrary();
+        } catch (err) {
+          showToast(`Cloud Import failed: ${err.message}`);
+        }
       } else {
-        showToast(`Import failed: ${res.error}`);
+        const res = importDataFromJson(content, false, AppState.vaultData);
+        if (res.success) {
+          AppState.vaultData = res.data;
+          showToast(`Successfully imported ${res.count} captures`);
+          ModalManager.close('modal-settings');
+          renderDashboard();
+          renderLibrary();
+        } else {
+          showToast(`Import failed: ${res.error}`);
+        }
       }
     };
     reader.readAsText(file);
@@ -1366,25 +1543,57 @@ function setupSettingsModal() {
   });
 
   // Load Seed Captures
-  document.getElementById('load-sample-btn')?.addEventListener('click', () => {
-    AppState.vaultData.items = [...SAMPLE_ITEMS];
-    saveData(AppState.vaultData);
-    showToast('Loaded 5 starter captures into your vault');
-    ModalManager.close('modal-settings');
-    renderDashboard();
-    renderLibrary();
-  });
-
-  // Reset Vault with confirmation and safety pre-reset download
-  document.getElementById('reset-vault-btn')?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to reset your vault? An automatic JSON backup will be downloaded before clearing.')) {
-      exportDataAsJson(AppState.vaultData);
-      resetStorage(AppState.vaultData);
-      AppState.vaultData = loadData();
-      showToast('Vault cleared and pre-reset backup saved');
+  document.getElementById('load-sample-btn')?.addEventListener('click', async () => {
+    if (AppState.isCloud) {
+      try {
+        const res = await api.importCaptures({ schemaVersion: 1, items: SAMPLE_ITEMS });
+        const fresh = await api.getCaptures();
+        AppState.vaultData.items = fresh;
+        showToast(`✨ Loaded seed captures into cloud vault (${res.imported} added, ${res.skipped} existing)`);
+        ModalManager.close('modal-settings');
+        renderDashboard();
+        renderLibrary();
+      } catch (e) {
+        showToast('Failed to load sample captures: ' + e.message);
+      }
+    } else {
+      AppState.vaultData.items = [...SAMPLE_ITEMS];
+      saveData(AppState.vaultData);
+      showToast('Loaded 5 starter captures into your vault');
       ModalManager.close('modal-settings');
       renderDashboard();
       renderLibrary();
+    }
+  });
+
+  // Reset Vault with confirmation and safety pre-reset download
+  document.getElementById('reset-vault-btn')?.addEventListener('click', async () => {
+    if (AppState.isCloud) {
+      if (confirm('Are you sure you want to clear your cloud vault? A backup will be downloaded before clearing.')) {
+        exportDataAsJson(AppState.vaultData);
+        try {
+          for (const item of AppState.vaultData.items) {
+            await api.deleteCapture(item.id);
+          }
+          AppState.vaultData.items = [];
+          showToast('All captures deleted from your cloud account');
+          ModalManager.close('modal-settings');
+          renderDashboard();
+          renderLibrary();
+        } catch (e) {
+          showToast('Failed to clear cloud captures: ' + e.message);
+        }
+      }
+    } else {
+      if (confirm('Are you sure you want to reset your vault? An automatic JSON backup will be downloaded before clearing.')) {
+        exportDataAsJson(AppState.vaultData);
+        resetStorage(AppState.vaultData);
+        AppState.vaultData = loadData();
+        showToast('Vault cleared and pre-reset backup saved');
+        ModalManager.close('modal-settings');
+        renderDashboard();
+        renderLibrary();
+      }
     }
   });
 }
@@ -1416,3 +1625,342 @@ function setupKeyboardShortcuts() {
     }
   });
 }
+
+// ============================================================================
+// MindVault Version 2 — Authentication & Cloud Session Controller
+// ============================================================================
+async function initSessionAndData() {
+  try {
+    const res = await api.getMe();
+    if (res && res.authenticated && res.user) {
+      AppState.currentUser = res.user;
+      AppState.isCloud = true;
+      if (res.settings && res.settings.theme) {
+        applyTheme(res.settings.theme);
+      }
+      try {
+        const cloudItems = await api.getCaptures();
+        AppState.vaultData = {
+          schemaVersion: 1,
+          items: cloudItems,
+          settings: res.settings || { theme: 'light' }
+        };
+      } catch (fetchErr) {
+        console.warn('Failed to load user cloud captures:', fetchErr);
+      }
+
+      updateAuthUI();
+      checkMigrationPrompt();
+      return;
+    }
+  } catch (err) {
+    console.log('MindVault running in local guest mode:', err.message);
+  }
+
+  AppState.currentUser = null;
+  AppState.isCloud = false;
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const guestGroup = document.getElementById('header-auth-guest');
+  const userGroup = document.getElementById('header-auth-user');
+  const userInitial = document.getElementById('nav-user-initial');
+  const userName = document.getElementById('nav-user-name');
+  const syncStatus = document.getElementById('footer-sync-status');
+  const userLabel = document.getElementById('footer-user-label');
+
+  if (AppState.isCloud && AppState.currentUser) {
+    if (guestGroup) guestGroup.style.display = 'none';
+    if (userGroup) userGroup.style.display = 'flex';
+    if (userInitial) userInitial.textContent = AppState.currentUser.username.charAt(0).toUpperCase();
+    if (userName) userName.textContent = AppState.currentUser.username;
+    if (syncStatus) syncStatus.textContent = 'Storage: Cloud Synced (MySQL)';
+    if (userLabel) userLabel.textContent = `@${AppState.currentUser.username}`;
+  } else {
+    if (guestGroup) guestGroup.style.display = 'flex';
+    if (userGroup) userGroup.style.display = 'none';
+    if (syncStatus) syncStatus.textContent = 'Storage: LocalStorage (Guest Mode)';
+    if (userLabel) userLabel.textContent = '100% On-Device';
+  }
+}
+
+function setupAuthHandlers() {
+  const openLoginBtn = document.getElementById('auth-open-login-btn');
+  const modalCloseBtn = document.getElementById('modal-auth-close-btn');
+  const tabLogin = document.getElementById('auth-tab-login');
+  const tabRegister = document.getElementById('auth-tab-register');
+  const switchModeBtn = document.getElementById('auth-switch-mode-btn');
+  const form = document.getElementById('auth-form');
+  const emailGroup = document.getElementById('auth-group-email');
+  const usernameLabel = document.getElementById('auth-username-label');
+  const usernameInput = document.getElementById('auth-username');
+  const emailInput = document.getElementById('auth-email');
+  const passwordInput = document.getElementById('auth-password');
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const modalTitle = document.getElementById('modal-auth-title');
+  const errorBox = document.getElementById('auth-error-box');
+  const logoutBtn = document.getElementById('auth-logout-btn');
+
+  const setMode = (mode) => {
+    AppState.authMode = mode;
+    clearAuthAlerts();
+    if (mode === 'login') {
+      tabLogin?.classList.add('active');
+      tabLogin?.setAttribute('aria-selected', 'true');
+      tabRegister?.classList.remove('active');
+      tabRegister?.setAttribute('aria-selected', 'false');
+      if (emailGroup) emailGroup.style.display = 'none';
+      if (usernameLabel) usernameLabel.innerHTML = 'Username or Email <span style="color: var(--danger);">*</span>';
+      if (usernameInput) usernameInput.placeholder = 'e.g. alex or alex@example.com';
+      if (submitBtn) submitBtn.textContent = 'Sign In';
+      if (switchModeBtn) switchModeBtn.textContent = 'Need an account? Register';
+      if (modalTitle) modalTitle.textContent = 'Sign In to MindVault';
+    } else {
+      tabRegister?.classList.add('active');
+      tabRegister?.setAttribute('aria-selected', 'true');
+      tabLogin?.classList.remove('active');
+      tabLogin?.setAttribute('aria-selected', 'false');
+      if (emailGroup) emailGroup.style.display = 'flex';
+      if (usernameLabel) usernameLabel.innerHTML = 'Username <span style="color: var(--danger);">*</span>';
+      if (usernameInput) usernameInput.placeholder = 'e.g. alexander (3-50 letters/numbers)';
+      if (submitBtn) submitBtn.textContent = 'Create Account';
+      if (switchModeBtn) switchModeBtn.textContent = 'Already have an account? Sign In';
+      if (modalTitle) modalTitle.textContent = 'Create Your MindVault Account';
+    }
+  };
+
+  openLoginBtn?.addEventListener('click', () => {
+    setMode('login');
+    ModalManager.open('modal-auth');
+  });
+
+  modalCloseBtn?.addEventListener('click', () => {
+    ModalManager.close('modal-auth');
+  });
+
+  tabLogin?.addEventListener('click', () => setMode('login'));
+  tabRegister?.addEventListener('click', () => setMode('register'));
+  switchModeBtn?.addEventListener('click', () => {
+    setMode(AppState.authMode === 'login' ? 'register' : 'login');
+  });
+
+  const clearAuthAlerts = () => {
+    if (errorBox) {
+      errorBox.textContent = '';
+      errorBox.style.display = 'none';
+    }
+    document.querySelectorAll('#modal-auth .form-error').forEach(el => {
+      el.textContent = '';
+      el.classList.remove('visible');
+    });
+  };
+
+  const showAuthError = (message) => {
+    if (errorBox) {
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+    }
+  };
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthAlerts();
+
+    const usernameVal = usernameInput ? usernameInput.value.trim() : '';
+    const emailVal = emailInput ? emailInput.value.trim() : '';
+    const passwordVal = passwordInput ? passwordInput.value : '';
+
+    if (AppState.authMode === 'register') {
+      if (!usernameVal || usernameVal.length < 3 || usernameVal.length > 50) {
+        showAuthError('Username must be between 3 and 50 characters.');
+        return;
+      }
+      if (!/^[a-zA-Z0-9_\-\.]+$/.test(usernameVal)) {
+        showAuthError('Username can only contain letters, numbers, periods, dashes, or underscores.');
+        return;
+      }
+      if (!emailVal || !emailVal.includes('@')) {
+        showAuthError('Please enter a valid email address.');
+        return;
+      }
+      if (!passwordVal || passwordVal.length < 8) {
+        showAuthError('Password must be at least 8 characters long.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating account...';
+      }
+
+      try {
+        const res = await api.register({
+          username: usernameVal,
+          email: emailVal,
+          password: passwordVal
+        });
+
+        AppState.currentUser = res.user;
+        AppState.isCloud = true;
+        AppState.vaultData = {
+          schemaVersion: 1,
+          items: [],
+          settings: { theme: document.documentElement.getAttribute('data-theme') || 'light' }
+        };
+
+        updateAuthUI();
+        ModalManager.close('modal-auth');
+        showToast(`🎉 Account created! Welcome, ${res.user.username}!`);
+        renderDashboard();
+        renderLibrary();
+
+        // Offer local-to-cloud migration if user has existing local items
+        checkMigrationPrompt();
+      } catch (err) {
+        showAuthError(err.message || 'Registration failed.');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Account';
+        }
+      }
+    } else {
+      // Sign In
+      if (!usernameVal) {
+        showAuthError('Please enter your username or email.');
+        return;
+      }
+      if (!passwordVal) {
+        showAuthError('Please enter your password.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing in...';
+      }
+
+      try {
+        const res = await api.login({
+          username_or_email: usernameVal,
+          password: passwordVal
+        });
+
+        AppState.currentUser = res.user;
+        AppState.isCloud = true;
+
+        // Fetch cloud captures and settings
+        const [cloudCaptures, meData] = await Promise.all([
+          api.getCaptures(),
+          api.getMe()
+        ]);
+
+        AppState.vaultData = {
+          schemaVersion: 1,
+          items: cloudCaptures,
+          settings: meData.settings || { theme: 'light' }
+        };
+
+        if (meData.settings?.theme) {
+          applyTheme(meData.settings.theme);
+        }
+
+        updateAuthUI();
+        ModalManager.close('modal-auth');
+        showToast(`👋 Welcome back, ${res.user.username}!`);
+        renderDashboard();
+        renderLibrary();
+
+        checkMigrationPrompt();
+      } catch (err) {
+        showAuthError(err.message || 'Login failed. Please check your credentials.');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign In';
+        }
+      }
+    }
+  });
+
+  logoutBtn?.addEventListener('click', async () => {
+    try {
+      await api.logout();
+    } catch (e) {
+      console.warn('Logout API error:', e);
+    }
+    AppState.currentUser = null;
+    AppState.isCloud = false;
+    AppState.vaultData = loadData();
+    updateAuthUI();
+    showToast('Signed out of MindVault. Switched to guest mode.');
+    renderDashboard();
+    renderLibrary();
+  });
+}
+
+function checkMigrationPrompt() {
+  if (!AppState.isCloud) return;
+
+  // Check if there are captures in localStorage
+  const local = loadData();
+  if (!local || !Array.isArray(local.items) || local.items.length === 0) return;
+
+  // Check if any local items have IDs that are not yet in the cloud vault
+  const cloudIds = new Set((AppState.vaultData.items || []).map(i => i.id));
+  const unmigrated = local.items.filter(i => !cloudIds.has(i.id));
+
+  if (unmigrated.length > 0) {
+    const countLabel = document.getElementById('migration-count-label');
+    if (countLabel) countLabel.textContent = `${unmigrated.length} local ${unmigrated.length === 1 ? 'capture' : 'captures'}`;
+    setTimeout(() => {
+      ModalManager.open('modal-migration');
+    }, 700);
+  }
+}
+
+function setupMigrationHandlers() {
+  const closeBtn = document.getElementById('modal-migration-close-btn');
+  const skipBtn = document.getElementById('modal-migration-skip-btn');
+  const confirmBtn = document.getElementById('modal-migration-confirm-btn');
+
+  if (closeBtn) closeBtn.addEventListener('click', () => ModalManager.close('modal-migration'));
+  if (skipBtn) skipBtn.addEventListener('click', () => ModalManager.close('modal-migration'));
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      const local = loadData();
+      if (!local || !local.items || local.items.length === 0) {
+        ModalManager.close('modal-migration');
+        return;
+      }
+
+      const originalText = confirmBtn.textContent;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Importing to cloud...';
+
+      try {
+        const res = await api.importCaptures({
+          schemaVersion: 1,
+          items: local.items
+        });
+
+        // Fetch fresh captures
+        const fresh = await api.getCaptures();
+        AppState.vaultData.items = fresh;
+
+        ModalManager.close('modal-migration');
+        showToast(`☁️ Migrated ${res.imported} captures to your cloud account! (${res.skipped} skipped)`);
+        renderDashboard();
+        renderLibrary();
+      } catch (err) {
+        showToast(`Migration failed: ${err.message}`);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText;
+      }
+    });
+  }
+}
+

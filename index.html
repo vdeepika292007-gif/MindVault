@@ -53,6 +53,24 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         </button>
 
+        <!-- Auth Controls (Guest vs Logged In) -->
+        <div id="header-auth-guest" class="header-auth-group">
+          <button type="button" class="btn btn-secondary btn-sm" id="auth-open-login-btn" title="Sign In or Create Account">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+            <span>Sign In</span>
+          </button>
+        </div>
+
+        <div id="header-auth-user" class="header-auth-group" style="display: none;">
+          <div class="user-profile-badge" id="nav-user-badge" title="Authenticated User Profile">
+            <span class="user-avatar-initial" id="nav-user-initial">U</span>
+            <span class="user-name-label" id="nav-user-name">User</span>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="auth-logout-btn" title="Sign Out of MindVault">
+            Sign Out
+          </button>
+        </div>
+
         <button type="button" class="btn btn-primary" id="quick-capture-btn" title="Quick Capture (Ctrl+K)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           <span>Capture</span>
@@ -727,6 +745,99 @@ Click one of the simulation buttons above to test the AiAdapter interface contra
     </div>
   </div>
 
+  <!-- =====================================================================
+       MODAL: AUTHENTICATION (SIGN IN & REGISTER)
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-auth" role="dialog" aria-modal="true" aria-labelledby="modal-auth-title">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-auth-title">Sign In to MindVault</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-auth-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Auth Mode Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab-btn active" id="auth-tab-login" role="tab" aria-selected="true">Sign In</button>
+        <button type="button" class="auth-tab-btn" id="auth-tab-register" role="tab" aria-selected="false">Create Account</button>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <div class="modal-body">
+          <div class="auth-alert-box error" id="auth-error-box" style="display: none;" role="alert"></div>
+          <div class="auth-alert-box success" id="auth-success-box" style="display: none;" role="alert"></div>
+
+          <!-- Registration: Email Address -->
+          <div class="form-group" id="auth-group-email" style="display: none;">
+            <label class="form-label" for="auth-email">
+              Email Address <span style="color: var(--danger);">*</span>
+            </label>
+            <input type="email" id="auth-email" class="form-input" placeholder="you@example.com" autocomplete="email">
+            <span class="form-error" id="auth-email-error"></span>
+          </div>
+
+          <!-- Username or Email -->
+          <div class="form-group" id="auth-group-username">
+            <label class="form-label" for="auth-username" id="auth-username-label">
+              Username or Email <span style="color: var(--danger);">*</span>
+            </label>
+            <input type="text" id="auth-username" class="form-input" placeholder="e.g. alex or alex@example.com" autocomplete="username" required>
+            <span class="form-error" id="auth-username-error"></span>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label class="form-label" for="auth-password">
+              Password <span style="color: var(--danger);">*</span>
+            </label>
+            <input type="password" id="auth-password" class="form-input" placeholder="Minimum 8 characters" autocomplete="current-password" required>
+            <span class="form-error" id="auth-password-error"></span>
+          </div>
+
+          <div class="auth-helper-note" id="auth-helper-note">
+            Passwords are encrypted using bcrypt hashing. Your captures are kept strictly private in MySQL.
+          </div>
+        </div>
+
+        <div class="modal-footer" style="justify-content: space-between;">
+          <button type="button" class="btn btn-ghost btn-sm" id="auth-switch-mode-btn">
+            Need an account? Register
+          </button>
+          <button type="submit" class="btn btn-primary" id="auth-submit-btn">
+            Sign In
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: LOCAL TO CLOUD MIGRATION PROMPT
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-migration" role="dialog" aria-modal="true" aria-labelledby="modal-migration-title">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-migration-title">Sync Local Notes to Cloud?</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-migration-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.95rem; color: var(--text-main); line-height: 1.5;">
+          We found <strong id="migration-count-label">0 captures</strong> stored locally in your browser.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+          Would you like to import them into your MindVault cloud account? They will be securely saved to your MySQL database and accessible across all your devices.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="modal-migration-skip-btn">Skip for Now</button>
+        <button type="button" class="btn btn-primary" id="modal-migration-confirm-btn">Import to Cloud</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer class="site-footer">
     <div class="app-container footer-inner">
@@ -734,9 +845,9 @@ Click one of the simulation buttons above to test the AiAdapter interface contra
         <strong>MindVault</strong> — Minimal-premium personal second brain.
       </div>
       <div class="footer-badge">
-        <span>Storage: localStorage (v1)</span>
+        <span id="footer-sync-status">Storage: Checking...</span>
         <span>•</span>
-        <span>100% Private</span>
+        <span id="footer-user-label">100% Private</span>
       </div>
     </div>
   </footer>

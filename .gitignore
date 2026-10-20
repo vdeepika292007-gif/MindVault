@@ -1,0 +1,17 @@
+# MindVault Version 2 — Git Ignore Rules
+# Never commit real database passwords, session secrets, or server credentials.
+
+# Local database and configuration secrets
+api/config/config.php
+.env
+.env.local
+
+# Operating System temporary files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs and runtime caches
+*.log
+error_log
