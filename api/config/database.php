@@ -5,34 +5,38 @@
  * and prepared statements to ensure total protection against SQL injection.
  */
 
+
 function get_config(): array {
     static $config = null;
+
     if ($config !== null) {
         return $config;
     }
 
+    // This file is in api/config/, alongside config.php.
     $configFile = __DIR__ . '/config.php';
-    $exampleFile = __DIR__ . '/config.example.php';
 
-    if (file_exists($configFile)) {
-        $config = require $configFile;
-    } elseif (file_exists($exampleFile)) {
-        $config = require $exampleFile;
-    } else {
-        $config = [
-            'db' => [
-                'host'     => getenv('DB_HOST') ?: '127.0.0.1',
-                'port'     => (int)(getenv('DB_PORT') ?: 3306),
-                'dbname'   => getenv('DB_NAME') ?: 'mindvault',
-                'username' => getenv('DB_USER') ?: 'root',
-                'password' => getenv('DB_PASS') ?: '',
-                'charset'  => 'utf8mb4'
-            ]
-        ];
+    if (!is_file($configFile)) {
+        error_log('MindVault configuration file is missing.');
+        throw new RuntimeException(
+            'MindVault configuration is not available.'
+        );
     }
+
+    $loadedConfig = require $configFile;
+
+    if (!is_array($loadedConfig) || !isset($loadedConfig['db'])) {
+        error_log('MindVault configuration structure is invalid.');
+        throw new RuntimeException(
+            'MindVault configuration is invalid.'
+        );
+    }
+
+    $config = $loadedConfig;
 
     return $config;
 }
+
 
 function get_db_connection(): PDO {
     static $pdo = null;
@@ -46,16 +50,22 @@ function get_db_connection(): PDO {
     $dsn = sprintf(
         'mysql:host=%s;port=%d;dbname=%s;charset=%s',
         $dbConfig['host'],
-        $dbConfig['port'] ?? 3306,
+        $dbConfig['port'] ?? 3307,
         $dbConfig['dbname'],
         $dbConfig['charset'] ?? 'utf8mb4'
     );
+
+    // In PHP 8.5+, driver-specific attributes moved to Pdo\Mysql::*
+    // Use Pdo\Mysql::ATTR_INIT_COMMAND if defined, or integer 1002 (PDO::MYSQL_ATTR_INIT_COMMAND value)
+    $initCommandAttr = defined('Pdo\Mysql::ATTR_INIT_COMMAND')
+        ? \Pdo\Mysql::ATTR_INIT_COMMAND
+        : 1002;
 
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
-        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+        $initCommandAttr             => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
     ];
 
     try {

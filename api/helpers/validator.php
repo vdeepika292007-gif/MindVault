@@ -32,9 +32,22 @@ function validate_email(string $email): ?string {
     return null;
 }
 
+/**
+ * Validates account password for registration.
+ *
+ * DEVELOPMENT-ONLY POLICY:
+ * For local testing convenience, simple passwords of 4 or more characters (e.g. 4–8
+ * characters without requiring symbols, uppercase letters, or numbers) are permitted.
+ *
+ * SECURITY WARNING:
+ * This relaxed minimum length policy is strictly for local development and unit testing.
+ * In any production or public deployment, enforce a minimum of 8–12 characters with
+ * appropriate entropy/complexity requirements.
+ */
 function validate_password(string $password): ?string {
-    if (strlen($password) < 8) {
-        return 'Password must be at least 8 characters long.';
+    // Development-only relaxed length rule (allows simple 4-8 char passwords for testing)
+    if (strlen($password) < 4) {
+        return 'Password must be at least 4 characters long (development mode).';
     }
     if (strlen($password) > 200) {
         return 'Password is too long (maximum 200 characters).';

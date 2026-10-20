@@ -111,22 +111,32 @@ function get_csrf_token(): string {
     return $_SESSION['csrf_token'];
 }
 
+
 function verify_csrf_token(): void {
-    // Only check state-changing methods for logged in users
     $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-    if (!in_array($method, ['POST', 'PUT', 'DELETE'], true)) {
+
+    if (!in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
         return;
     }
+
+    // Ensure the session is active before reading its token.
+    session_start_secure();
 
     $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     $input = get_json_input();
     $bodyToken = $input['csrf_token'] ?? ($_POST['csrf_token'] ?? '');
-    $provided = $headerToken ?: $bodyToken;
+    $provided = (string) ($headerToken ?: $bodyToken);
+    $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
 
-    $sessionToken = $_SESSION['csrf_token'] ?? '';
-
-    // If a session token exists, require a match
-    if ($sessionToken && (!hash_equals($sessionToken, (string)$provided))) {
-        error_response('Invalid or missing security token (CSRF). Please refresh and try again.', 403);
+    // Reject requests if the token is absent or does not match.
+    if (
+        $sessionToken === '' ||
+        $provided === '' ||
+        !hash_equals($sessionToken, $provided)
+    ) {
+        error_response(
+            'Invalid or missing security token (CSRF). Please refresh and try again.',
+            403
+        );
     }
 }

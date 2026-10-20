@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user = require_auth();
+verify_csrf_token();
 $userId = $user['id'];
 
 $input = get_json_input();
@@ -50,11 +51,21 @@ $pdo = get_db_connection();
 
 try {
     // Fetch user's existing captures to check for duplicates by (title, content) or existing ID
-    $existingStmt = $pdo->prepare('SELECT id, title, content FROM captures WHERE user_id = ?');
-    $existingStmt->execute([$userId]);
-    $existingRows = $existingStmt->fetchAll();
+    // Fetch all existing IDs because the primary key is global across captures.
+// Fetch this user's captures separately for duplicate-content detection.
+$existingStmt = $pdo->prepare('SELECT id FROM captures');
+$existingStmt->execute();
+$allExistingIds = $existingStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    $existingIds = [];
+$existingStmt = $pdo->prepare(
+    'SELECT id, title, content FROM captures WHERE user_id = ?'
+);
+$existingStmt->execute([$userId]);
+$existingRows = $existingStmt->fetchAll();
+
+
+
+    $existingIds = array_fill_keys($allExistingIds, true);
     $existingHashes = [];
 
     foreach ($existingRows as $row) {

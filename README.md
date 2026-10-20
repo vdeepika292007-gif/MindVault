@@ -1,266 +1,195 @@
-# MindVault Version 2 — Multi-User Cloud Knowledge Vault
+# MindVault Version 2 — Personal Knowledge Vault
 
-MindVault is a minimal-premium personal knowledge vault and AI second brain. Version 2 upgrades the browser-based prototype to a secure, multi-user web application powered by **PHP 8** and **MySQL**, while preserving the clean frontend aesthetic (Warm Paper & Ink / Dark Obsidian) and offline-first guest experience.
+MindVault is a web-based personal knowledge management application designed to help users organize, store, edit, and manage their notes in one place.
 
----
+Version 2 extends the original browser-based prototype with a PHP backend, a MySQL database, user authentication, and persistent storage. The project focuses on a clean interface, organized knowledge capture, and secure handling of user data.
 
-## 🏛️ System Architecture
+## ✨ Core Features
 
+- User registration and login
+- Create, view, edit, and delete notes
+- Persistent note storage using MySQL
+- User-specific note access
+- Session-based authentication
+- Theme settings that persist after refresh
+- Server-side input validation
+- Database operations using PDO prepared statements
+- CSRF protection for supported state-changing requests
+- Guest and browser-based storage functionality, where supported by the application
+
+## 🛠️ Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| HTML5 | Application structure |
+| CSS3 | Styling and responsive interface |
+| JavaScript | Frontend interactions and API requests |
+| PHP 8+ | Backend logic and REST API |
+| MySQL 8+ | Persistent relational storage |
+| PDO | Database connectivity |
+| Git and GitHub | Version control and project hosting |
+
+## 🏗️ Architecture
+
+MindVault follows a frontend–backend–database architecture.
+
+1. **Frontend:** HTML, CSS, and JavaScript provide the user interface.
+2. **Backend:** PHP endpoints handle authentication, notes, and settings.
+3. **Database:** MySQL stores user accounts, notes, and user settings.
+4. **Communication:** The frontend communicates with the backend through HTTP requests and JSON responses.
+
+## 📂 Project Structure
+
+```text
+MindVault/
+├── api/
+│   ├── auth/
+│   │   ├── login.php
+│   │   ├── logout.php
+│   │   ├── me.php
+│   │   └── register.php
+│   ├── captures/
+│   │   ├── index.php
+│   │   ├── create.php
+│   │   ├── update.php
+│   │   ├── delete.php
+│   │   └── import.php
+│   ├── config/
+│   │   ├── config.example.php
+│   │   └── database.php
+│   ├── helpers/
+│   │   ├── auth.php
+│   │   ├── response.php
+│   │   └── validator.php
+│   └── settings/
+│       └── index.php
+├── css/
+│   └── style.css
+├── js/
+│   ├── api.js
+│   └── app.js
+├── index.html
+├── package.json
+└── README.md
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    MindVault Frontend (SPA)                     │
-│   • HTML5 Semantic Structure    • Vanilla CSS Design System     │
-│   • ES Modules: app.js, ui.js, items.js, search.js, insight.js  │
-│   • api.js HTTP Client (Fetch + Credentials + CSRF Protection)  │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ JSON REST API (HttpOnly Cookies)
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    PHP 8 Backend Core                           │
-│   • api/auth/       -> register.php, login.php, logout.php, me  │
-│   • api/captures/   -> index.php, create.php, update.php,       │
-│                        delete.php, import.php                   │
-│   • api/settings/   -> index.php (theme & daily insights)       │
-│   • api/helpers/    -> auth.php, response.php, validator.php    │
-│   • api/config/     -> database.php, config.php (Protected)     │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │ PDO (Prepared Statements, UTF-8)
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    MySQL 8.x Database                           │
-│   • `users`         -> id, username, email, password_hash       │
-│   • `captures`      -> id, user_id (FK), title, content, type,  │
-│                        url, tags (JSON), is_pinned, is_archived │
-│   • `user_settings` -> user_id (FK), theme, last_insight_date   │
-└─────────────────────────────────────────────────────────────────┘
-```
 
----
+*This tree highlights the main files reviewed during development. Additional files may exist in the project.*
 
-## 🛡️ Security Guarantees & Technical Principles
-
-1. **Password Hashing with Bcrypt**:
-   Passwords are never stored in plaintext. They are hashed using PHP's native `password_hash($password, PASSWORD_BCRYPT)`, which uses a secure random 22-character salt and adaptive cost factor. Verification is performed using timing-safe `password_verify()`.
-
-2. **Session Security & Fixation Protection**:
-   - `session_start_secure()` configures cookies with `HttpOnly = true` (inaccessible to JavaScript, defending against XSS cookie theft).
-   - `SameSite = Lax` prevents cross-site request cookie leaking.
-   - `session_regenerate_id(true)` is invoked upon every login to neutralize session fixation attacks.
-
-3. **Strict Relational User Boundaries (Multi-Tenant Isolation)**:
-   Every private database query derives `user_id` strictly from `$_SESSION['user_id']`. The client can never supply or tamper with the user ID. Even if a user guesses another user's capture ID, update and delete queries enforce `WHERE id = :id AND user_id = :session_user_id`, guaranteeing total privacy.
-
-4. **100% Prepared Statements (Zero SQL Injection)**:
-   All queries use PDO parameterized statements. Input is never directly concatenated into SQL strings.
-
-5. **Cross-Site Request Forgery (CSRF) Tokens**:
-   State-changing requests (`POST`, `PUT`, `DELETE`) require a valid `X-CSRF-Token` header matching the token generated in the active session.
-
-6. **Defensive Graceful Fallback (Guest Mode)**:
-   If the PHP backend is offline or the user is not signed in, MindVault functions seamlessly in **Guest Mode** using browser `localStorage`. When the user decides to create an account or sign in, MindVault prompts a one-click migration to copy local captures to their private cloud database.
-
----
-
-## 🚀 Quick Start & Local Setup Guide
+## 🚀 Local Setup
 
 ### Prerequisites
-- **MySQL 8.0 or later** (or MariaDB 10.4+). *Note: On Windows, MySQL Server is typically already running as a Windows Service (`MySQL84` or `MySQL`).*
-- **PHP 8.0 or later** with `pdo_mysql` and `mbstring` extensions enabled.
-- A modern web browser (Chrome, Firefox, Edge, Safari).
 
----
+- PHP 8 or later
+- MySQL 8 or later
+- PHP `pdo_mysql` and `mbstring` extensions
+- A modern web browser
 
-### Step 1: Verify Git Branch
-Ensure you are working on the safe feature branch:
-```bash
-git checkout feature/php-mysql-v2
+### 1. Clone or open the project
+
+Open the MindVault project folder in your code editor or terminal.
+
+### 2. Configure the database
+
+Ensure the MySQL server is running and that the `mindvault` database and required tables have been created.
+
+If your repository includes a database schema file, use that file to initialize a fresh database.
+
+### 3. Configure database credentials
+
+Create the local configuration file using the example template if needed:
+
+```powershell
+Copy-Item api/config/config.example.php api/config/config.php
 ```
 
----
+Update `api/config/config.php` with your local database settings. For this development setup, the database connection uses port `3307` and the dedicated `mindvault_app` account.
 
-### Step 2: Set Up the MySQL Database
+**Important:** Use your own locally configured password. Never put real credentials in this README or commit the private configuration file.
 
-1. Open your terminal, MySQL CLI, or GUI tool (MySQL Workbench, HeidiSQL, or phpMyAdmin).
-2. Run the database schema script located at `database/schema.sql`:
+The actual configuration file is excluded through `.gitignore`.
 
-**Via MySQL CLI (PowerShell / Command Prompt / Bash):**
-```bash
-mysql -u root -p < database/schema.sql
-```
-*(Enter your MySQL root password when prompted).*
+### 4. Start the PHP development server
 
-This automatically creates:
-- Database: `mindvault` (with `utf8mb4_unicode_ci` charset)
-- Tables: `users`, `captures`, and `user_settings` with foreign keys and cascade rules.
+From the MindVault project root, run:
 
----
-
-### Step 3: Configure Database Credentials
-
-1. In the `api/config/` folder, copy the example config file:
-   ```bash
-   cp api/config/config.example.php api/config/config.php
-   ```
-   *(On Windows Command Prompt: `copy api\config\config.example.php api\config\config.php`)*
-
-2. Open `api/config/config.php` in your text editor:
-   ```php
-   return [
-       'db' => [
-           'host'     => '127.0.0.1',
-           'port'     => 3306,
-           'dbname'   => 'mindvault',
-           'username' => 'root',     // Your local MySQL username
-           'password' => 'YOUR_PASSWORD_HERE', // Your local MySQL password
-           'charset'  => 'utf8mb4'
-       ],
-       ...
-   ];
-   ```
-   > 🔒 **Security Notice**: `api/config/config.php` is listed in `.gitignore`. It will never be committed to Git.
-
----
-
-### Step 4: Start the Local Development Server
-
-Run PHP's built-in web server directly from the project root directory:
-
-```bash
-php -S localhost:8000
+```powershell
+php -S 127.0.0.1:8000
 ```
 
-*(Alternatively, if you use XAMPP, place the `MindVault` folder inside your `xampp/htdocs/` folder and start Apache and MySQL from the XAMPP Control Panel).*
+If PHP is not available in your system PATH, use the PHP executable installed on your computer.
 
----
+Keep the terminal running while using the application.
 
-### Step 5: Open MindVault
+### 5. Open MindVault
 
-Navigate in your web browser to:
-```
-http://localhost:8000
-```
+Visit:
 
----
+http://127.0.0.1:8000
 
-## 🧪 15-Point Testing Checklist
+## 🔐 Security Design
 
-Use this checklist to verify all features and security controls:
+MindVault includes several security-related controls:
 
-- [ ] **1. User Registration**:
-  Click **Sign In** in the top navigation -> click **Create Account**. Register with username `alice`, email `alice@example.com`, and password `password123`. Verify successful registration, welcome toast, and user badge `@alice` appearing in the top bar.
+- **Password hashing:** PHP password-hashing functions are used to protect stored passwords.
+- **Session management:** Authentication uses server-side sessions and secure cookie options.
+- **Session ID regeneration:** Session identifiers are regenerated during login to help prevent session fixation.
+- **User authorization:** Private note operations are scoped to the authenticated user.
+- **Prepared statements:** PDO parameterized queries are used for database operations.
+- **CSRF protection:** Supported state-changing requests validate a session-associated security token.
+- **Input validation:** Server-side validation helps reject invalid request data.
+- **Configuration protection:** The local database configuration is excluded from Git.
 
-- [ ] **2. Duplicate Prevention**:
-  Attempt to register again with username `alice` or email `alice@example.com`. Confirm error message: *"Username or email already in use."*
+These controls improve security, but they do not constitute a guarantee that the application is free from vulnerabilities. A complete independent security audit and production testing have not been established by the development checks described below.
 
-- [ ] **3. Password Policy Validation**:
-  Attempt to register with a password shorter than 8 characters (e.g., `pass`). Confirm the rejection error.
+## 🧪 Development Testing
 
-- [ ] **4. Create Captures (All 4 Types)**:
-  Click **+ Capture** (or press `Ctrl + K` / `Cmd + K`):
-  - **Note**: Title: *"System Architecture"*, content: *"Microservices vs Monoliths"*, tags: `architecture, backend`.
-  - **Idea**: Title: *"AI Voice Synthesizer"*, content: *"Record personalized audio summaries"*, tags: `ai, audio`.
-  - **Link**: Title: *"PHP Documentation"*, URL: `https://www.php.net`, tags: `php, reference`.
-  - **Snippet**: Title: *"PDO Connection"*, content: `new PDO($dsn, $user, $pass);`, tags: `php, sql`.
-  Confirm all 4 appear on the Dashboard and in the Library.
+The following checks were performed during development:
 
-- [ ] **5. Refresh Persistence**:
-  Refresh the browser (`F5` or `Ctrl + R`). Confirm you remain signed in and all 4 captures load from MySQL.
+- PHP syntax checks across the API files
+- Login and logout behavior
+- Note creation, editing, and deletion
+- Note persistence after refreshing the browser
+- Settings persistence after refreshing the browser
+- Restriction of note access while logged out
+- Git whitespace checks
+- Verification that the private database configuration is ignored by Git
 
-- [ ] **6. Edit Capture**:
-  Open the detail modal for any capture -> click **Edit**. Update the title or add a tag. Save and verify changes persist in the database.
+Additional tests are recommended for account registration, duplicate accounts, multi-user isolation, invalid requests, guest-data migration, backup import/export, and production security.
 
-- [ ] **7. Pin / Unpin Capture**:
-  Click the pin icon on a card. Confirm amber pin badge appears, stat card increments, and the card moves to the top of the Library.
+## 🛡️ Deployment Considerations
 
-- [ ] **8. Archive / Restore**:
-  Click the archive icon. Switch Library filter from **Active** to **Archived**. Verify it appears under Archived and disappears from Active. Click Restore to return it.
+Before deploying MindVault to a public server:
 
-- [ ] **9. Delete Capture**:
-  Open detail view -> click **Delete** -> confirm in modal. Verify capture is permanently deleted from MySQL.
+1. Use HTTPS.
+2. Configure a dedicated database account with only the permissions the application needs.
+3. Store credentials outside the public repository.
+4. Review session cookie settings for production.
+5. Disable detailed error output to users.
+6. Test authorization boundaries using multiple accounts.
+7. Review CSRF handling, input validation, rate limiting, and error responses.
+8. Back up the database and test recovery procedures.
 
-- [ ] **10. Smart Search**:
-  In Library search, type `type:snippet` or `#php`. Confirm instant filtering with highlighted matching keywords.
+The PHP built-in development server is intended for local development, not public production hosting.
 
-- [ ] **11. Ask MindVault (Grounded Q&A)**:
-  Navigate to **Ask MindVault**. Search for *"architecture"*. Verify answer synthesizes citations and cites your saved notes without hallucinating facts.
+## 📌 Project Status
 
-- [ ] **12. Multi-User Isolation Test (Critical)**:
-  - Open a new **Private / Incognito Window** and navigate to `http://localhost:8000`.
-  - Register as user `bob` (`bob@example.com`).
-  - Verify Bob's vault is empty and Bob **cannot** see any of Alice's notes.
-  - Create a note as Bob. Confirm Alice cannot see Bob's note.
+MindVault's core note-management workflows have been exercised locally, and the PHP API files passed syntax checks during development.
 
-- [ ] **13. Local-to-Cloud Migration**:
-  In an incognito window without signing in (Guest mode), create 2 local notes. Now click **Sign In** and log in as Alice. MindVault detects the local notes and presents the **Sync Local Notes to Cloud?** dialog. Click **Import to Cloud** and verify notes are safely imported into MySQL.
+Further testing, documentation verification, and a comprehensive security review are recommended before describing the application as production-ready.
 
-- [ ] **14. JSON Backup Export & Import**:
-  Open Vault Settings (gear icon) -> click **Export Vault as JSON**. Confirm valid `.json` download. Click **Import JSON Backup** to verify seamless migration.
+## 🎯 Learning Objectives
 
-- [ ] **15. Sign Out**:
-  Click **Sign Out** in the header. Confirm session is destroyed, cookies expired, and MindVault safely returns to Guest Mode.
+This project provides practical experience with:
 
----
+- Full-stack web application development
+- PHP backend programming
+- Relational database design and MySQL
+- REST API communication
+- Authentication and authorization
+- Session and CSRF security concepts
+- Frontend–backend integration
+- Git-based version control
 
-## 📁 Repository Structure
+## 👩‍💻 Author
 
-```
-MindVault/
-├── .gitignore                      # Protects config.php, .env, and logs
-├── index.html                      # Single-page application shell & modals
-├── package.json                    # Project metadata & npm scripts
-├── README.md                       # Complete documentation & test guide
-├── css/
-│   └── style.css                   # Responsive Warm Paper & Dark Obsidian styles
-├── js/
-│   ├── api.js                      # Authenticated Fetch client with CSRF & session handling
-│   ├── app.js                      # Application controller & view router
-│   ├── items.js                    # Model validation, filters, stats, related notes
-│   ├── storage.js                  # Defensive localStorage helper (Guest fallback)
-│   ├── search.js                   # Keyword & Smart rule search engine
-│   ├── insight.js                  # Daily Rediscovery deterministic connection engine
-│   ├── ask.js                      # Grounded retrieval Q&A with citations
-│   ├── ui.js                       # Accessible DOM card components, toasts, modal manager
-│   └── aiAdapter.js                # Modular client adapter for future AI integrations
-├── database/
-│   └── schema.sql                  # MySQL 8 schema (users, captures, user_settings)
-└── api/
-    ├── config/
-    │   ├── config.example.php      # Safe configuration template
-    │   └── database.php            # Singleton PDO connection manager
-    ├── helpers/
-    │   ├── response.php            # JSON response & CORS helper
-    │   ├── auth.php                # Session security, Bcrypt, HttpOnly cookies, CSRF
-    │   └── validator.php           # Sanitization and input validation
-    ├── auth/
-    │   ├── register.php            # Account creation endpoint
-    │   ├── login.php               # Login & session initiation endpoint
-    │   ├── logout.php              # Session destruction endpoint
-    │   └── me.php                  # Active session & profile endpoint
-    ├── captures/
-    │   ├── index.php               # GET user captures
-    │   ├── create.php              # POST new capture
-    │   ├── update.php              # POST/PUT update capture
-    │   ├── delete.php              # POST/DELETE capture
-    │   └── import.php              # POST JSON migration endpoint
-    └── settings/
-        └── index.php               # GET/POST user theme and insight settings
-```
-
----
-
-## 🚢 Deployment to Production Web Hosts
-
-To deploy MindVault to a PHP/MySQL web host (such as cPanel, SiteGround, DigitalOcean, Linode, AWS, or similar):
-
-1. Upload all files into your web root (e.g., `public_html/`).
-2. Create a MySQL database and user via your hosting control panel.
-3. Import `database/schema.sql` into your remote database via phpMyAdmin or MySQL CLI.
-4. Create `api/config/config.php` on the server with your production database credentials.
-5. In `api/config/config.php`, set:
-   ```php
-   'session' => [
-       'secure' => true, // Enforces HTTPS-only cookies
-       'samesite' => 'Lax'
-   ]
-   ```
-6. Ensure your domain has an SSL certificate enabled (HTTPS).
+Developed as a learning project to explore web development, database integration, and application security.

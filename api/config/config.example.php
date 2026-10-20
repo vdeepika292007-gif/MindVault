@@ -12,9 +12,9 @@
 return [
     'db' => [
         'host'     => '127.0.0.1',
-        'port'     => 3306,
+        'port'     => 3307,
         'dbname'   => 'mindvault',
-        'username' => 'root',
+        'username' => 'mindvault_app',
         'password' => '', // Set your local MySQL root password here
         'charset'  => 'utf8mb4'
     ],

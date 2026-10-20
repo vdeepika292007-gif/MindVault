@@ -12,6 +12,7 @@ require_once __DIR__ . '/../helpers/auth.php';
 setup_api_headers();
 
 $user = require_auth();
+verify_csrf_token();
 $userId = $user['id'];
 $pdo = get_db_connection();
 
@@ -41,8 +42,6 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST' || $method === 'PUT') {
-    verify_csrf_token();
-
     $input = get_json_input();
     $theme = isset($input['theme']) ? trim((string)$input['theme']) : null;
     $lastInsightDate = isset($input['last_insight_date']) ? trim((string)$input['last_insight_date']) : null;

@@ -1701,10 +1701,35 @@ function setupAuthHandlers() {
   const modalTitle = document.getElementById('modal-auth-title');
   const errorBox = document.getElementById('auth-error-box');
   const logoutBtn = document.getElementById('auth-logout-btn');
+  const passwordToggleBtn = document.getElementById('auth-password-toggle-btn');
+
+  // Accessible Show/Hide password visibility controller
+  const resetPasswordVisibility = () => {
+    if (passwordInput) {
+      passwordInput.type = 'password';
+    }
+    if (passwordToggleBtn) {
+      passwordToggleBtn.textContent = 'Show';
+      passwordToggleBtn.setAttribute('aria-label', 'Show password');
+      passwordToggleBtn.setAttribute('aria-pressed', 'false');
+    }
+  };
+
+  passwordToggleBtn?.addEventListener('click', () => {
+    if (!passwordInput) return;
+    const isCurrentlyPassword = passwordInput.type === 'password';
+    passwordInput.type = isCurrentlyPassword ? 'text' : 'password';
+    passwordToggleBtn.textContent = isCurrentlyPassword ? 'Hide' : 'Show';
+    passwordToggleBtn.setAttribute('aria-label', isCurrentlyPassword ? 'Hide password' : 'Show password');
+    passwordToggleBtn.setAttribute('aria-pressed', isCurrentlyPassword ? 'true' : 'false');
+    passwordInput.focus();
+  });
 
   const setMode = (mode) => {
     AppState.authMode = mode;
     clearAuthAlerts();
+    resetPasswordVisibility();
+
     if (mode === 'login') {
       tabLogin?.classList.add('active');
       tabLogin?.setAttribute('aria-selected', 'true');
@@ -1713,6 +1738,7 @@ function setupAuthHandlers() {
       if (emailGroup) emailGroup.style.display = 'none';
       if (usernameLabel) usernameLabel.innerHTML = 'Username or Email <span style="color: var(--danger);">*</span>';
       if (usernameInput) usernameInput.placeholder = 'e.g. alex or alex@example.com';
+      if (passwordInput) passwordInput.placeholder = 'Enter your password';
       if (submitBtn) submitBtn.textContent = 'Sign In';
       if (switchModeBtn) switchModeBtn.textContent = 'Need an account? Register';
       if (modalTitle) modalTitle.textContent = 'Sign In to MindVault';
@@ -1724,6 +1750,7 @@ function setupAuthHandlers() {
       if (emailGroup) emailGroup.style.display = 'flex';
       if (usernameLabel) usernameLabel.innerHTML = 'Username <span style="color: var(--danger);">*</span>';
       if (usernameInput) usernameInput.placeholder = 'e.g. alexander (3-50 letters/numbers)';
+      if (passwordInput) passwordInput.placeholder = 'e.g. 4–8 characters (dev mode)';
       if (submitBtn) submitBtn.textContent = 'Create Account';
       if (switchModeBtn) switchModeBtn.textContent = 'Already have an account? Sign In';
       if (modalTitle) modalTitle.textContent = 'Create Your MindVault Account';
@@ -1732,10 +1759,12 @@ function setupAuthHandlers() {
 
   openLoginBtn?.addEventListener('click', () => {
     setMode('login');
+    resetPasswordVisibility();
     ModalManager.open('modal-auth');
   });
 
   modalCloseBtn?.addEventListener('click', () => {
+    resetPasswordVisibility();
     ModalManager.close('modal-auth');
   });
 
@@ -1784,8 +1813,9 @@ function setupAuthHandlers() {
         showAuthError('Please enter a valid email address.');
         return;
       }
-      if (!passwordVal || passwordVal.length < 8) {
-        showAuthError('Password must be at least 8 characters long.');
+      // Development mode allows simple 4-8 character passwords for quick local testing
+      if (!passwordVal || passwordVal.length < 4) {
+        showAuthError('Password must be at least 4 characters long (development mode).');
         return;
       }
 
@@ -1809,6 +1839,7 @@ function setupAuthHandlers() {
           settings: { theme: document.documentElement.getAttribute('data-theme') || 'light' }
         };
 
+        resetPasswordVisibility();
         updateAuthUI();
         ModalManager.close('modal-auth');
         showToast(`🎉 Account created! Welcome, ${res.user.username}!`);
@@ -1866,6 +1897,7 @@ function setupAuthHandlers() {
           applyTheme(meData.settings.theme);
         }
 
+        resetPasswordVisibility();
         updateAuthUI();
         ModalManager.close('modal-auth');
         showToast(`👋 Welcome back, ${res.user.username}!`);

@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user = require_auth();
 $userId = $user['id'];
+verify_csrf_token();
 
 $input = get_json_input();
 $validation = validate_capture_fields($input);

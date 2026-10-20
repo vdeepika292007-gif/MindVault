@@ -13,7 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     error_response('Method Not Allowed', 405);
 }
 
-// Destroy session and expire session cookie
+// Require an authenticated session before logging out.
+require_auth();
+
+// Verify the CSRF token before destroying the session.
+verify_csrf_token();
+
+// Destroy session and expire session cookie.
 logout_user();
 
 json_response([

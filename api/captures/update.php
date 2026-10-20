@@ -20,6 +20,7 @@ if (!in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
 }
 
 $user = require_auth();
+verify_csrf_token();
 $userId = $user['id'];
 
 $input = get_json_input();

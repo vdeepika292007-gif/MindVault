@@ -108,17 +108,27 @@ class MindVaultApi {
   /**
    * Logs into an existing account.
    */
+
+  /**
+   * Logs into an existing account.
+   */
   async login({ username_or_email, password }) {
     const data = await this.request('/api/auth/login.php', {
       method: 'POST',
-      body: { username_or_email, password }
+      body: {
+        identifier: username_or_email,
+        password: password
+      }
     });
+
     if (data.user) {
       this.currentUser = data.user;
       this.csrfToken = data.csrf_token || null;
     }
+
     return data;
   }
+
 
   /**
    * Terminates session and clears cookies.
