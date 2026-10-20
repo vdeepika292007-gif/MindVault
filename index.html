@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindVault — Personal Knowledge Vault & AI Second Brain</title>
+  <meta name="description" content="MindVault is a minimal-premium personal knowledge vault and AI second brain for capturing notes, ideas, links, and snippets with local retrieval and daily rediscovery.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Global Toast Notifications -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Header & Navigation -->
+  <header class="site-header">
+    <div class="app-container header-inner">
+      <a href="#" class="brand-link" id="brand-home-link" aria-label="MindVault Home">
+        <div class="brand-icon" aria-hidden="true">MV</div>
+        <div class="brand-info">
+          <span class="brand-title">MindVault</span>
+          <span class="brand-badge">Local AI Vault</span>
+        </div>
+      </a>
+
+      <!-- Primary Navigation -->
+      <nav class="site-nav" aria-label="Main Navigation">
+        <button type="button" class="nav-btn active" id="nav-btn-dashboard" data-view="dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </button>
+        <button type="button" class="nav-btn" id="nav-btn-library" data-view="library">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Library
+        </button>
+        <button type="button" class="nav-btn" id="nav-btn-ask" data-view="ask">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Ask MindVault
+        </button>
+        <button type="button" class="nav-btn" id="nav-btn-architecture" data-view="architecture">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+          Architecture & AI
+        </button>
+      </nav>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <button type="button" class="btn btn-secondary btn-icon" id="theme-toggle-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          <svg id="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg id="theme-icon-moon" style="display:none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <button type="button" class="btn btn-secondary btn-icon" id="settings-open-btn" title="Vault Data & Backup" aria-label="Vault Settings & Backup">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+
+        <button type="button" class="btn btn-primary" id="quick-capture-btn" title="Quick Capture (Ctrl+K)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Capture</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Sections -->
+  <main class="main-content">
+    <div class="app-container">
+
+      <!-- ===================================================================
+           VIEW 1: DASHBOARD
+           =================================================================== -->
+      <section class="view-section active" id="view-dashboard" aria-labelledby="dashboard-title">
+        <header class="section-header">
+          <h1 class="section-title" id="dashboard-title">Vault Overview</h1>
+          <p class="section-desc">Your private knowledge second brain — capturing notes, ideas, links, and snippets on device.</p>
+        </header>
+
+        <!-- Stats Grid (Clickable Filters) -->
+        <div class="stats-grid" id="dashboard-stats-grid">
+          <div class="stat-card clickable" id="stat-card-active" data-filter-type="all" tabindex="0" role="button" aria-label="View all active captures in library">
+            <span class="stat-label">Active Captures</span>
+            <span class="stat-value" id="stat-active-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+          <div class="stat-card clickable" id="stat-card-notes" data-filter-type="note" tabindex="0" role="button" aria-label="View notes in library">
+            <span class="stat-label">Notes</span>
+            <span class="stat-value" id="stat-notes-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+          <div class="stat-card clickable" id="stat-card-ideas" data-filter-type="idea" tabindex="0" role="button" aria-label="View ideas in library">
+            <span class="stat-label">Ideas</span>
+            <span class="stat-value" id="stat-ideas-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+          <div class="stat-card clickable" id="stat-card-links" data-filter-type="link" tabindex="0" role="button" aria-label="View links in library">
+            <span class="stat-label">Links</span>
+            <span class="stat-value" id="stat-links-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+          <div class="stat-card clickable" id="stat-card-snippets" data-filter-type="snippet" tabindex="0" role="button" aria-label="View snippets in library">
+            <span class="stat-label">Snippets</span>
+            <span class="stat-value" id="stat-snippets-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+          <div class="stat-card clickable" id="stat-card-pinned" data-filter-pinned="true" tabindex="0" role="button" aria-label="View pinned captures in library">
+            <span class="stat-label">Pinned</span>
+            <span class="stat-value" id="stat-pinned-count">0</span>
+            <span class="stat-card-hint">Filter library &rarr;</span>
+          </div>
+        </div>
+
+        <!-- Daily Rediscovery Hero Card (Meaningful Connections & Actions) -->
+        <section class="daily-insight-card" id="daily-insight-section" aria-label="Daily Rediscovery">
+          <div class="insight-header">
+            <span class="insight-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              Daily Rediscovery
+            </span>
+            <span class="insight-date" id="daily-insight-date">Today</span>
+          </div>
+          <h2 class="insight-headline" id="daily-insight-headline">Generating connection...</h2>
+          <div class="insight-narrative-box" id="daily-insight-narrative">
+            Reviewing your vault for deterministic daily associations...
+          </div>
+          <div class="insight-actions-bar" id="daily-insight-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-explore-connection">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              Explore Connection
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-open-both-notes">
+              Open Both Notes
+            </button>
+          </div>
+          <div class="insight-items-grid" id="daily-insight-items-container">
+            <!-- Dynamic insight cards injected here -->
+          </div>
+        </section>
+
+        <!-- Dashboard Panels (Pinned & Recent + Tags) -->
+        <div class="dashboard-grid">
+          <div class="dashboard-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Pinned Captures</h2>
+              <button type="button" class="btn btn-ghost btn-sm" id="dashboard-view-all-pinned-btn">View in Library &rarr;</button>
+            </div>
+            <div class="items-container grid-view" id="dashboard-pinned-container">
+              <!-- Pinned cards injected here -->
+            </div>
+
+            <div class="panel-header" style="margin-top: 1.5rem;">
+              <h2 class="panel-title">Recent Captures</h2>
+              <button type="button" class="btn btn-ghost btn-sm" id="dashboard-view-all-recent-btn">View All &rarr;</button>
+            </div>
+            <div class="items-container grid-view" id="dashboard-recent-container">
+              <!-- Recent cards injected here -->
+            </div>
+          </div>
+
+          <!-- Sidebar column: Tags & Privacy notice -->
+          <div class="dashboard-panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Knowledge Tags</h2>
+            </div>
+            <div class="tag-cloud" id="dashboard-tags-cloud">
+              <!-- Tag chips injected here -->
+            </div>
+
+            <div class="arch-card" style="margin-top: 1rem; padding: 1.25rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem;">100% Local & Private</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">MindVault runs completely inside your browser using versioned LocalStorage. No server, third-party analytics, or remote LLM receives your private notes.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           VIEW 2: LIBRARY (BROWSE & SEARCH)
+           =================================================================== -->
+      <section class="view-section" id="view-library" aria-labelledby="library-title">
+        <header class="section-header">
+          <h1 class="section-title" id="library-title">Knowledge Library</h1>
+          <p class="section-desc">Search, filter, and organize all your captures with instant keyword matching and local smart search.</p>
+        </header>
+
+        <!-- Library Toolbar -->
+        <div class="library-toolbar">
+          <!-- Search input -->
+          <div class="search-bar-wrapper">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="search" class="search-input" id="library-search-input" placeholder="Search captures or try smart queries like 'ideas about travel'..." aria-label="Search captures">
+            <button type="button" class="search-clear-btn" id="library-search-clear-btn" aria-label="Clear search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+
+          <!-- Smart Search Rule Suggestions -->
+          <div class="smart-search-hints">
+            <span>Try local smart search:</span>
+            <button type="button" class="hint-chip" data-query="ideas about travel">ideas about travel</button>
+            <button type="button" class="hint-chip" data-query="links about web">links about web</button>
+            <button type="button" class="hint-chip" data-query="snippets about javascript">snippets about javascript</button>
+            <button type="button" class="hint-chip" data-query="tag:ux">tag:ux</button>
+            <button type="button" class="hint-chip" data-query="pinned">pinned</button>
+          </div>
+
+          <!-- Active Smart Rule Banner -->
+          <div class="smart-rule-banner" id="smart-rule-banner">
+            <span id="smart-rule-text">⚡ Local Smart Rule Applied</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="smart-rule-reset-btn">Clear Rule</button>
+          </div>
+
+          <!-- Filter & Sort Controls Row -->
+          <div class="filter-controls-row">
+            <!-- Type Filters -->
+            <div class="type-filter-group" role="tablist" aria-label="Filter by Capture Type">
+              <button type="button" class="type-filter-btn active" data-type="all">All <span class="type-badge-count" id="type-count-all">(0)</span></button>
+              <button type="button" class="type-filter-btn" data-type="note">Notes <span class="type-badge-count" id="type-count-note">(0)</span></button>
+              <button type="button" class="type-filter-btn" data-type="idea">Ideas <span class="type-badge-count" id="type-count-idea">(0)</span></button>
+              <button type="button" class="type-filter-btn" data-type="link">Links <span class="type-badge-count" id="type-count-link">(0)</span></button>
+              <button type="button" class="type-filter-btn" data-type="snippet">Snippets <span class="type-badge-count" id="type-count-snippet">(0)</span></button>
+            </div>
+
+            <!-- Meta Controls: Tag, Status, Sort, View -->
+            <div class="filter-meta-group">
+              <!-- Tag Selector -->
+              <select class="select-control" id="library-tag-select" aria-label="Filter by Tag">
+                <option value="">All Tags</option>
+              </select>
+
+              <!-- Status Toggle: Active vs Archived -->
+              <div class="status-segmented-control" role="group" aria-label="Status filter">
+                <button type="button" class="status-btn active" id="status-btn-active" data-status="active">Active</button>
+                <button type="button" class="status-btn" id="status-btn-archived" data-status="archived">Archived</button>
+              </div>
+
+              <!-- Sort Order -->
+              <select class="select-control" id="library-sort-select" aria-label="Sort Order">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="updated">Recently Updated</option>
+                <option value="title">Title (A-Z)</option>
+              </select>
+
+              <!-- View Layout Toggle -->
+              <div class="view-toggle-group" role="group" aria-label="Layout view">
+                <button type="button" class="view-toggle-btn active" id="view-mode-grid" title="Grid View" aria-label="Grid View">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </button>
+                <button type="button" class="view-toggle-btn" id="view-mode-list" title="List View" aria-label="List View">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Info Bar -->
+        <div class="results-info-bar">
+          <span id="results-count-text">Showing 0 captures</span>
+          <span id="active-filter-summary"></span>
+        </div>
+
+        <!-- Captures Container -->
+        <div class="items-container grid-view" id="library-items-container">
+          <!-- Dynamic cards injected here -->
+        </div>
+
+        <!-- Empty state placeholder -->
+        <div class="empty-state" id="library-empty-state" style="display: none;">
+          <div class="empty-state-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <h2 class="empty-state-title" id="library-empty-title">No captures found</h2>
+          <p class="empty-state-desc" id="library-empty-desc">Try clearing your search terms, selecting another filter, or capture a new thought.</p>
+          <button type="button" class="btn btn-primary" id="empty-state-capture-btn">+ Capture Thought</button>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           VIEW 3: ASK MINDVAULT (LOCAL GROUNDED Q&A)
+           =================================================================== -->
+      <section class="view-section" id="view-ask" aria-labelledby="ask-title">
+        <div class="ask-container">
+          <header class="section-header" style="text-align: center; align-items: center;">
+            <h1 class="section-title" id="ask-title">Ask MindVault</h1>
+            <p class="section-desc" style="max-width: 620px;">
+              Query your private vault using grounded local text retrieval. Every answer is transparently derived from your saved captures, with zero external cloud calls.
+            </p>
+          </header>
+
+          <!-- Ask Box -->
+          <div class="ask-box-wrapper">
+            <form id="ask-form">
+              <div class="ask-input-group">
+                <input type="text" class="ask-input" id="ask-query-input" placeholder="e.g., What did I save about offline architecture or UX?" aria-label="Ask your vault a question" required>
+                <button type="submit" class="btn btn-primary" id="ask-submit-btn">
+                  <span>Retrieve Answer</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="ask-suggestions">
+              <span class="ask-suggestions-label">Try asking:</span>
+              <button type="button" class="ask-chip" data-question="What did I save about cognitive load and UX?">Cognitive load & UX</button>
+              <button type="button" class="ask-chip" data-question="What are my ideas on offline architecture?">Offline architecture ideas</button>
+              <button type="button" class="ask-chip" data-question="Show me the javascript snippet for seed generator">Seed generator snippet</button>
+              <button type="button" class="ask-chip" data-question="What notes discuss AI boundaries?">AI boundary notes</button>
+            </div>
+          </div>
+
+          <!-- Ask Results Panel -->
+          <div class="ask-result-panel" id="ask-result-panel">
+            <div class="answer-card" id="answer-card">
+              <div class="answer-header">
+                <span class="answer-badge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Grounded Local Retrieval
+                </span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);" id="ask-sources-count">Found 0 sources</span>
+              </div>
+              <div class="answer-text" id="answer-content-text">
+                <!-- Synthesized grounded answer injected here -->
+              </div>
+            </div>
+
+            <!-- Cited Sources -->
+            <div class="sources-section" id="ask-sources-section">
+              <h2 class="sources-heading">Cited Sources From Your Vault</h2>
+              <div class="sources-grid" id="ask-sources-container">
+                <!-- Source cards injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           VIEW 4: ARCHITECTURE & HONEST AI ROADMAP
+           =================================================================== -->
+      <section class="view-section" id="view-architecture" aria-labelledby="arch-title">
+        <header class="section-header">
+          <h1 class="section-title" id="arch-title">System Architecture & AI Roadmap</h1>
+          <p class="section-desc">Honest, secure foundations: why MindVault MVP operates 100% in-browser, and how the future AI backend will be safely connected.</p>
+        </header>
+
+        <!-- Current MVP vs Future Backend Architecture -->
+        <div class="arch-card">
+          <h2 class="arch-card-title">Two-Tier Security & Storage Architecture</h2>
+          <p class="arch-card-desc">
+            Directly embedding AI API keys (such as OpenAI, Anthropic, or Google Gemini) into client-side browser code leaks secrets to any visitor or script. MindVault strictly isolates all future AI functionality behind an authenticated first-party backend proxy.
+          </p>
+
+          <div class="arch-diagram-grid">
+            <!-- Phase 1: MVP -->
+            <div class="diagram-tier active-tier">
+              <div class="diagram-tier-title">
+                <span>Phase 1: Local Browser Engine</span>
+                <span class="tier-badge current">Currently Active</span>
+              </div>
+              <ul class="tier-list">
+                <li><span>✔</span> 100% Client-side execution in current browser profile</li>
+                <li><span>✔</span> Plaintext Web LocalStorage persistence with defensive parsing</li>
+                <li><span>✔</span> Rule-based local smart search ("ideas about...", "tag:")</li>
+                <li><span>✔</span> Deterministic daily insight seeded by local date</li>
+                <li><span>✔</span> Grounded local retrieval Q&A with strict citations</li>
+                <li><span>✔</span> Zero external API requests; zero credential leak risk</li>
+              </ul>
+            </div>
+
+            <!-- Phase 2: Future Backend -->
+            <div class="diagram-tier" style="border-style: dashed; opacity: 0.85;">
+              <div class="diagram-tier-title">
+                <span>Phase 2: Secure Server Backend</span>
+                <span class="tier-badge future">Planned Roadmap</span>
+              </div>
+              <ul class="tier-list">
+                <li><span>✦</span> Secure backend proxy (Node / Python / PHP)</li>
+                <li><span>✦</span> Provider API keys stored in server environment variables</li>
+                <li><span>✦</span> User authentication & encrypted cloud vault storage</li>
+                <li><span>✦</span> Vector embeddings and semantic hybrid search</li>
+                <li><span>✦</span> Automated LLM summarization and intelligent auto-tagging</li>
+                <li><span>✦</span> Rate limiting, usage quotas, and prompt-injection safeguards</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Honest Privacy & Storage Warning -->
+          <div class="privacy-alert-box">
+            <strong>Honest Privacy & Storage Notice:</strong>
+            MindVault runs completely on-device without sending your data to any cloud service.
+            <br>
+            • <em>Unencrypted Storage:</em> Web LocalStorage is stored as plain text within your browser profile. Anyone with physical access to your device profile can inspect this data. Do not store sensitive credentials in this release.
+            <br>
+            • <em>Cache Deletion Warning:</em> Clearing your browser cookies or site data will permanently remove your vault. Download regular backups via <strong>Settings &rarr; Export Vault as JSON</strong>.
+          </div>
+        </div>
+
+        <!-- Adapter Interface Simulator -->
+        <div class="arch-card">
+          <h2 class="arch-card-title">Future AI Adapter (`aiAdapter.js`) Simulation</h2>
+          <p class="arch-card-desc">
+            All AI operations are currently abstracted through the <code style="font-family: var(--font-mono); background: var(--bg-subtle); padding: 2px 4px; border-radius: 4px;">AiAdapter</code> interface. Try simulating how the adapter extracts highlights or suggests tags from your current vault content:
+          </p>
+
+          <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary" id="sim-suggest-tags-btn">
+              ⚡ Test Auto-Tag Suggestion
+            </button>
+            <button type="button" class="btn btn-secondary" id="sim-summarize-btn">
+              ⚡ Test Rule Summarizer
+            </button>
+            <button type="button" class="btn btn-secondary" id="sim-status-btn">
+              🔍 Inspect Adapter Security Status
+            </button>
+          </div>
+
+          <div id="adapter-sim-output" style="background-color: var(--bg-canvas); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 1rem; font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-main); min-height: 80px; white-space: pre-wrap;">
+Click one of the simulation buttons above to test the AiAdapter interface contract.
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- =====================================================================
+       MODAL: CREATE / EDIT CAPTURE
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-capture" role="dialog" aria-modal="true" aria-labelledby="modal-capture-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-capture-title">New Capture</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-capture-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <form id="capture-form" novalidate>
+        <div class="modal-body">
+          <!-- Type Selector Tabs -->
+          <div class="form-group">
+            <label class="form-label">Capture Type</label>
+            <div class="type-selector-tabs" role="radiogroup" aria-label="Select capture type">
+              <button type="button" class="type-tab-btn active" data-type="note" role="radio" aria-checked="true">Note</button>
+              <button type="button" class="type-tab-btn" data-type="idea" role="radio" aria-checked="false">Idea</button>
+              <button type="button" class="type-tab-btn" data-type="link" role="radio" aria-checked="false">Link</button>
+              <button type="button" class="type-tab-btn" data-type="snippet" role="radio" aria-checked="false">Snippet</button>
+            </div>
+            <input type="hidden" id="form-item-type" value="note">
+            <input type="hidden" id="form-item-id" value="">
+          </div>
+
+          <!-- Title Input -->
+          <div class="form-group">
+            <label for="form-title" class="form-label">Title <span style="color: var(--danger)">*</span></label>
+            <input type="text" class="form-input" id="form-title" placeholder="Give your capture a clear title..." maxlength="200" required>
+            <span class="form-error" id="form-title-error"></span>
+          </div>
+
+          <!-- URL Input (automatically shown for link captures) -->
+          <div class="form-group" id="form-url-group" style="display: none;">
+            <label for="form-url" class="form-label">Web URL <span id="form-url-required-badge" style="color: var(--danger);">*</span></label>
+            <input type="url" class="form-input" id="form-url" placeholder="https://example.com/reference">
+            <span class="form-error" id="form-url-error"></span>
+          </div>
+
+          <!-- Content / Body Textarea -->
+          <div class="form-group">
+            <div class="form-label">
+              <label for="form-content">Content / Body <span style="color: var(--danger)">*</span></label>
+              <button type="button" class="btn btn-ghost btn-sm" id="form-toggle-mono-btn" style="padding: 0 0.4rem; font-size: 0.75rem;">
+                Toggle Code Font
+              </button>
+            </div>
+            <textarea class="form-textarea" id="form-content" placeholder="Write your thoughts, ideas, or code snippet here..." required></textarea>
+            <span class="form-error" id="form-content-error"></span>
+            <span id="form-snippet-hint" style="display:none; font-size: 0.75rem; color: var(--text-subtle);">Code editor mode active. Press Tab to indent with 2 spaces.</span>
+          </div>
+
+          <!-- Tags Input -->
+          <div class="form-group">
+            <div class="form-label">
+              <label for="form-tag-input">Tags</label>
+              <button type="button" class="btn btn-ghost btn-sm" id="form-suggest-tags-btn" style="padding: 0 0.4rem; font-size: 0.75rem; color: var(--accent);">
+                ⚡ Suggest Tags
+              </button>
+            </div>
+            <div class="tag-input-container" id="form-tag-container">
+              <!-- Interactive tag chips injected here -->
+              <input type="text" class="tag-text-input" id="form-tag-input" placeholder="Type tag and press Enter or comma...">
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-subtle);">Press Enter or comma to add a tag. Click &times; to remove.</span>
+          </div>
+
+          <!-- Pin Checkbox -->
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" class="checkbox-input" id="form-is-pinned">
+              <span>Pin this capture to top of list and dashboard</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="modal-capture-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="modal-capture-save-btn">
+            <span>Save Capture</span>
+            <kbd style="margin-left: 0.35rem; font-size: 0.7rem; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3);">Ctrl+Enter</kbd>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: VIEW DETAIL WITH RELATED CAPTURES
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-detail" role="dialog" aria-modal="true" aria-labelledby="modal-detail-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="card-type-badge note" id="detail-type-badge">Note</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="detail-date-badge">Updated Oct 20, 2026</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-detail-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <h2 class="modal-title" id="modal-detail-title" style="font-size: 1.4rem; line-height: 1.35;">Capture Title</h2>
+        
+        <div id="detail-link-row" style="display: none;">
+          <a href="#" target="_blank" rel="noopener noreferrer" class="card-link-preview" id="detail-link-anchor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <span id="detail-link-text">https://example.com</span>
+          </a>
+        </div>
+
+        <div id="detail-content-area" style="font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main);">
+          <!-- Content rendered here -->
+        </div>
+
+        <div class="card-tags" id="detail-tags-container" style="margin-top: 1rem;">
+          <!-- Tags badges injected here -->
+        </div>
+
+        <!-- Priority 3: Related Captures Section -->
+        <div class="detail-related-section" id="detail-related-section">
+          <h3 class="detail-related-heading">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            Related Captures in Vault
+          </h3>
+          <div id="detail-related-container">
+            <!-- Dynamic related cards injected here -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="justify-content: space-between;">
+        <div style="display: flex; gap: 0.4rem;">
+          <button type="button" class="btn btn-secondary btn-sm" id="detail-copy-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="detail-pin-btn">Pin</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="detail-archive-btn">Archive</button>
+        </div>
+
+        <div style="display: flex; gap: 0.4rem;">
+          <button type="button" class="btn btn-danger btn-sm" id="detail-delete-btn">Delete</button>
+          <button type="button" class="btn btn-primary btn-sm" id="detail-edit-btn">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: EXPLORE CONNECTION (DUAL VIEW)
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-connection" role="dialog" aria-modal="true" aria-labelledby="modal-connection-title">
+    <div class="modal-dialog connection-dialog">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="card-type-badge idea">Daily Rediscovery Connection</span>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="connection-date-badge">Today</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-connection-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <h2 class="modal-title" id="modal-connection-title">Connected Insights</h2>
+        <div class="insight-narrative-box" id="modal-connection-narrative" style="margin-top: 0.5rem;"></div>
+
+        <div class="connection-dual-grid" id="modal-connection-dual-grid">
+          <!-- Injected dynamically: Card A and Card B -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="modal-connection-close-footer-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: DELETE CONFIRMATION
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-confirm-delete" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-delete-title">Delete Capture?</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-delete-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">
+          Are you sure you want to permanently delete <strong id="delete-capture-title-label" style="color: var(--text-main);">this capture</strong>? This action cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="modal-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="modal-delete-confirm-btn">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MODAL: VAULT DATA & SETTINGS
+       ===================================================================== -->
+  <div class="modal-overlay" id="modal-settings" role="dialog" aria-modal="true" aria-labelledby="modal-settings-title">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-settings-title">Vault Settings & Backup</h2>
+        <button type="button" class="btn btn-ghost btn-icon" id="modal-settings-close-btn" aria-label="Close dialog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Honest Storage & Privacy Warning -->
+        <div class="privacy-alert-box" style="margin-top: 0;">
+          <strong>Data Safety & Storage Model:</strong>
+          Captures are stored in plain text in your browser's LocalStorage. It is unencrypted, isolated to this device profile, and wiped if you clear browser site data.
+          <br>
+          <em>Recommendation: Regularly export a JSON backup to protect your knowledge.</em>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Export Data Backup</label>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Download all notes, ideas, links, and snippets as a clean versioned JSON backup file.</p>
+          <button type="button" class="btn btn-secondary" id="export-json-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Export Vault as JSON
+          </button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle);">
+
+        <div class="form-group">
+          <label class="form-label">Import Data</label>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Restore captures from a previous MindVault JSON backup (merges without duplicate IDs).</p>
+          <input type="file" id="import-json-file-input" accept=".json" style="display: none;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" id="import-json-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Import JSON Backup
+            </button>
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle);">
+
+        <!-- Keyboard Shortcuts Table -->
+        <div class="form-group">
+          <label class="form-label">Keyboard Shortcuts</label>
+          <table class="shortcuts-table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Shortcut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Quick Capture</td>
+                <td><kbd>Ctrl</kbd> + <kbd>K</kbd> / <kbd>Cmd</kbd> + <kbd>K</kbd></td>
+              </tr>
+              <tr>
+                <td>Save Capture (in modal)</td>
+                <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
+              </tr>
+              <tr>
+                <td>Indent Code (Snippet)</td>
+                <td><kbd>Tab</kbd> (2 spaces)</td>
+              </tr>
+              <tr>
+                <td>Focus Search</td>
+                <td><kbd>/</kbd></td>
+              </tr>
+              <tr>
+                <td>Close any modal</td>
+                <td><kbd>Esc</kbd></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle);">
+
+        <div class="form-group">
+          <label class="form-label">Sample Data</label>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Restore 5 seed captures showcasing UX notes, offline ideas, and code snippets.</p>
+          <button type="button" class="btn btn-secondary btn-sm" id="load-sample-btn">Load Seed Captures</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle);">
+
+        <div class="form-group">
+          <label class="form-label" style="color: var(--danger);">Reset Vault</label>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Clear all captures from localStorage. MindVault will automatically trigger a safety backup before resetting.</p>
+          <button type="button" class="btn btn-danger btn-sm" id="reset-vault-btn">Reset All Vault Data</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="modal-settings-close-footer-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="app-container footer-inner">
+      <div>
+        <strong>MindVault</strong> — Minimal-premium personal second brain.
+      </div>
+      <div class="footer-badge">
+        <span>Storage: localStorage (v1)</span>
+        <span>•</span>
+        <span>100% Private</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Script Module -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

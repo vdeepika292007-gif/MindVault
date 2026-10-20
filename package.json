@@ -1,0 +1,19 @@
+{
+  "name": "mindvault",
+  "version": "1.0.0",
+  "description": "MindVault — Personal knowledge vault and AI second brain MVP",
+  "main": "index.html",
+  "type": "module",
+  "scripts": {
+    "start": "python -m http.server 5173",
+    "dev": "python -m http.server 5173"
+  },
+  "keywords": [
+    "second-brain",
+    "notes",
+    "knowledge-vault",
+    "vanilla-js"
+  ],
+  "author": "",
+  "license": "MIT"
+}
